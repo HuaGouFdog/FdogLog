@@ -2,8 +2,10 @@
 #define FDOGLOGGER_H
 #include<iostream>
 #include<fstream>
+#include <sstream>
 #include<map>
 #include<mutex>
+#include"filemanagement.h"
 #ifndef linux
 #include<unistd.h>
 #include<sys/syscall.h>
@@ -22,6 +24,7 @@ namespace fdog {
 #define BLUE  "\e[1;34m"
 #define GREEN "\e[1;32m"
 #define WHITE "\e[1;37m"
+#define PURPLE "\e[1;35m"
 #define DEFA  "\e[0m"
 
 enum class coutType: int {Error, Warn, Info, Debug, Trace};
@@ -41,11 +44,15 @@ struct Logger {
     string logOutputLevelTerminal;//日志输出等级
 };
 
+static mutex * mutex_terminal;
+
 class FdogLogger {
 public:
     void initLogConfig();
 
     void releaseConfig();
+
+    void ConfInfoPrint();
 
     static FdogLogger* getInstance();
 
@@ -59,7 +66,13 @@ public:
 
     string getLogNameTime();
 
+    string getSourceFilePash();
+
     string getFilePash();
+
+    string getFilePathAndName();
+
+    string getFilePathAndNameAndTime();
 
     string getLogCoutProcessId();
 
@@ -67,9 +80,13 @@ public:
 
     string getLogCoutUserName();
 
-    bool createFile(string filePash);
+    string getLogFileSwitch();
 
-    bool logFileWrite(string messages);
+    string getLogTerminalSwitch();
+
+    string getCoutTypeColor(string colorType);
+
+    bool logFileWrite(string messages, string message, string LINE);
 
     bool bindFileCoutMap(string value1, fileType value2);
 
@@ -78,11 +95,14 @@ public:
 private:
     char szbuf[128];
     Logger logger;
+    FileManagement filemanagement;
     static FdogLogger * singleObject;
-    static mutex * mutex_new;
+    static mutex * mutex_log;
+    static mutex * mutex_file;
     map<coutType, string> coutTypeMap;
     map<fileType, bool> fileCoutMap;
     map<terminalType, bool> terminalCoutMap;
+    map<string, string> coutColor;
 
 private:
     FdogLogger();
@@ -106,62 +126,73 @@ private:
 #define __FDOGTIME__  FdogLogger::getInstance()->getLogCoutTime()          //时间宏
 #define __FDOGPID__   FdogLogger::getInstance()->getLogCoutProcessId()     //进程宏
 #define __FDOGTID__   FdogLogger::getInstance()->getLogCoutThreadId()      //线程宏
-#define __FDOGFILE__  __FILE__        //文件名宏
-#define __FDOGPASH__  FdogLogger::getInstance()->getFilePash() + __FDOGFILE__ //文件路径
-#define __FDOGFUNC__   __func__        //函数名宏
-#define __FDOGLINE__  __LINE__        //行数宏
 #define __USERNAME__  FdogLogger::getInstance()->getLogCoutUserName()     //获取调用用户名字
+#define __FDOGFILE__  __FILE__          //文件名宏
+#define __FDOGFUNC__  __func__          //函数名宏
+#define __FDOGLINE__  __LINE__          //行数宏
 #define __FDOGNAME__(name) #name        //名字宏
 
 
 #define COMBINATION_INFO_FILE(coutTypeInfo, message) \
     do{\
+        ostringstream oss;\
+        streambuf* pOldBuf = std::cout.rdbuf(oss.rdbuf());\
+        cout << message;\
+        string ret = oss.str();\
+        cout.rdbuf(pOldBuf);\
         string messagesAll = __FDOGTIME__ + coutTypeInfo + __USERNAME__ + __FDOGTID__ + SQUARE_BRACKETS_LEFT + \
-        __FDOGPASH__  + SPACE +__FDOGFUNC__ + COLON + to_string(__FDOGLINE__) + SQUARE_BRACKETS_RIGHT + message + LINE_FEED;\
-        FdogLogger::getInstance()->logFileWrite(messagesAll); \
+        __FDOGFILE__  + SPACE +__FDOGFUNC__ + COLON + to_string(__FDOGLINE__) + SQUARE_BRACKETS_RIGHT;\
+        FdogLogger::getInstance()->logFileWrite(messagesAll, ret, LINE_FEED); \
     }while(0);
 
 #define COMBINATION_INFO_TERMINAL(coutTypeInfo, message) \
     do{\
-        string messagesAll = __FDOGTIME__ + WHITE + coutTypeInfo + DEFA + __USERNAME__ + __FDOGTID__ + SQUARE_BRACKETS_LEFT + \
-        __FDOGPASH__  + SPACE +__FDOGFUNC__ + COLON + to_string(__FDOGLINE__) + SQUARE_BRACKETS_RIGHT + message + LINE_FEED;\
-        cout << messagesAll;\
+        string color = FdogLogger::getInstance()->getCoutTypeColor(coutTypeInfo);\
+        string logFormatCout = __FDOGTIME__ + color + coutTypeInfo + DEFA + __USERNAME__ + __FDOGTID__ + SQUARE_BRACKETS_LEFT + \
+        __FDOGFILE__  + SPACE +__FDOGFUNC__ + COLON + to_string(__FDOGLINE__) + SQUARE_BRACKETS_RIGHT;\
+        mutex_terminal->lock(); \
+        cout << logFormatCout << message << LINE_FEED;\
+        mutex_terminal->unlock(); \
     }while(0);
 
 #define LoggerCout(coutTyle, coutTypeInfo, fileCoutBool, terminalCoutBool, message) \
     do {\
         string coutType = FdogLogger::getInstance()->getCoutType(coutTyle);\
-        if (FdogLogger::getInstance()->getFileType(fileCoutBool)) {\
-            COMBINATION_INFO_FILE(coutTypeInfo, message)\
+        if ("off" != FdogLogger::getInstance()->getLogFileSwitch()){\
+            if (FdogLogger::getInstance()->getFileType(fileCoutBool)) {\
+                COMBINATION_INFO_FILE(coutTypeInfo, message)\
+            }\
         }\
-        if (FdogLogger::getInstance()->getTerminalType(terminalCoutBool)) {\
-            COMBINATION_INFO_TERMINAL(coutTypeInfo, message)\
+        if ("off" != FdogLogger::getInstance()->getLogTerminalSwitch()){\
+            if (FdogLogger::getInstance()->getTerminalType(terminalCoutBool)) {\
+                COMBINATION_INFO_TERMINAL(coutTypeInfo, message)\
+            }\
         }\
     }while(0);
 
-#define FdogError(message) \
+#define FdogError(...) \
     do{\
-        LoggerCout(fdog::coutType::Error, Error1, fdog::fileType::Error, fdog::terminalType::Error, message)\
+        LoggerCout(fdog::coutType::Error, Error1, fdog::fileType::Error, fdog::terminalType::Error, __VA_ARGS__)\
     }while(0);
 
-#define FdogWarn(message)  \
+#define FdogWarn(...)  \
     do{\
-        LoggerCout(fdog::coutType::Warn, Warn1, fdog::fileType::Warn, fdog::terminalType::Warn, message)\
+        LoggerCout(fdog::coutType::Warn, Warn1, fdog::fileType::Warn, fdog::terminalType::Warn, __VA_ARGS__)\
     }while(0);
 
-#define FdogInfo(message)  \
+#define FdogInfo(...)  \
     do{\
-        LoggerCout(fdog::coutType::Info, Info1, fdog::fileType::Info, fdog::terminalType::Info, message)\
+        LoggerCout(fdog::coutType::Info, Info1, fdog::fileType::Info, fdog::terminalType::Info, __VA_ARGS__)\
     }while(0);
 
-#define FdogDebug(message) \
+#define FdogDebug(...) \
     do{\
-        LoggerCout(fdog::coutType::Debug, Debug1, fdog::fileType::Debug, fdog::terminalType::Debug, message)\
+        LoggerCout(fdog::coutType::Debug, Debug1, fdog::fileType::Debug, fdog::terminalType::Debug, __VA_ARGS__)\
     }while(0);
 
-#define FdogTrace(message) \
+#define FdogTrace(...) \
     do{\
-        LoggerCout(fdog::coutType::Trace, Trace1, fdog::fileType::Trace, fdog::terminalType::Trace, message)\
+        LoggerCout(fdog::coutType::Trace, Trace1, fdog::fileType::Trace, fdog::terminalType::Trace, __VA_ARGS__)\
     }while(0);
 
 }

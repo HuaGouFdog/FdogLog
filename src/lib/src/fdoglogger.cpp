@@ -4,25 +4,34 @@ using namespace fdog;
 
 
 FdogLogger * FdogLogger::singleObject = nullptr;
-mutex * FdogLogger::mutex_new = new(mutex);
+mutex * FdogLogger::mutex_log = new(mutex);
+mutex * FdogLogger::mutex_file = new(mutex);
+mutex * mutex_terminal = new(mutex);
 
 FdogLogger::FdogLogger(){
     initLogConfig();
 }
+
 FdogLogger::~FdogLogger(){
 
 }
 
 FdogLogger* FdogLogger::getInstance(){
-    mutex_new->lock();
+    mutex_log->lock();
     if (singleObject == nullptr) {
         singleObject = new FdogLogger();
     }
-    mutex_new->unlock();
+    mutex_log->unlock();
     return singleObject;
 }
 
 void FdogLogger::initLogConfig(){
+
+    coutColor["Error"] = "\e[1;31m";
+    coutColor["Warn"] = "\e[1;35m";
+    coutColor["Info"] = "\e[1;34m";
+    coutColor["Debug"] = "\e[1;32m";
+    coutColor["Trace"] = "\e[1;37m";
 
     map<string, string *> flogConfInfo;
     flogConfInfo["logSwitch"] = &this->logger.logSwitch;
@@ -39,16 +48,15 @@ void FdogLogger::initLogConfig(){
     string str;
     ifstream file;
     char str_c[100]={0};
-    file.open("fdoglogconf.conf");
+    file.open("../../conf/fdoglogconf.conf");
     if(!file.is_open()){
-        cout<<"文件打开失败\n";
+        cout<<"File open failed" <<endl;
     }
     while(getline(file, str)){
         if(!str.length()) {
             continue;
         }
         string str_copy = str;
-        //cout<<"获取数据："<<str_copy<<endl;
         int j = 0;
         for(int i = 0; i < str.length(); i++){
             if(str[i]==' ')continue;
@@ -66,7 +74,7 @@ void FdogLogger::initLogConfig(){
             }
         }
     }
-    logger.logName = logger.logName + getLogNameTime() + ".log";
+    file.close();
 
     bindFileCoutMap("5", fileType::Error);
     bindFileCoutMap("4", fileType::Warn);
@@ -80,25 +88,46 @@ void FdogLogger::initLogConfig(){
     bindTerminalCoutMap("2", terminalType::Debug);
     bindTerminalCoutMap("1", terminalType::Trace);
 
+    string filePashAndName = getFilePathAndName();
+    string filePash = getFilePash();
     if(logger.logFileSwitch == "on"){
-        if(!createFile(logger.logFilePath)){
-            std::cout<<"Log work path creation failed\n";
-        }
-    }
+        //检查路径
+        filemanagement.createFilePash(filePash);
+        //检测文件有效性
+        if(!filemanagement.verifyFileExistence(filePashAndName)) {
+            filemanagement.createFile(filePashAndName);
 
-    cout << "|========FdogLogger v2.0==========================|" <<endl << endl;
-    cout << "  日志开关：" << logger.logSwitch << endl;
-    cout << "  文件输出：" << logger.logFileSwitch << endl;
-    cout << "  终端输出：" << logger.logTerminalSwitch << endl;
-    cout << "  日志输出等级(文件)：" << logger.logOutputLevelFile << endl;    
-    cout << "  日志输出等级(终端)：" << logger.logOutputLevelTerminal << endl;
-    cout << "  日志文件名：" << logger.logName << endl;
-    cout << "  日志保存路径：" << logger.logFilePath << endl;
-    cout << "  单文件最大大小："<< logger.logMixSize << "M" << endl;
-    cout << "  日志保存时间 ：" << logger.logOverlay << "天" << endl << endl;
-    cout << "|=================================================|" <<endl;
-    
+        } else {
+            if(!filemanagement.verifyFileValidityDays(filePashAndName, logger.logOverlay)){
+                string newFileName = getFilePathAndNameAndTime();
+                filemanagement.fileRename(filePashAndName, newFileName);
+
+                filemanagement.createFile(filePashAndName);
+            } else {
+                long fileSize = filemanagement.verifyFileSize(filePashAndName);
+                if (fileSize > (long)atoi(logger.logMixSize.data()) * 1048576 && logger.logBehavior == "1"){
+                    string newFileName = getFilePathAndNameAndTime();
+                    filemanagement.fileRename(filePashAndName, newFileName);
+                    filemanagement.createFile(filePashAndName);
+                }
+            }
+        }
+    }  
     return;
+}
+
+void FdogLogger::ConfInfoPrint() {
+    // cout << "|========FdogLogger v2.0==========================|" <<endl << endl;
+    // cout << "  日志开关：" << logger.logSwitch << endl;
+    // cout << "  文件输出：" << logger.logFileSwitch << endl;
+    // cout << "  终端输出：" << logger.logTerminalSwitch << endl;
+    // cout << "  日志输出等级(文件)：" << logger.logOutputLevelFile << endl;    
+    // cout << "  日志输出等级(终端)：" << logger.logOutputLevelTerminal << endl;
+    // cout << "  日志文件名：" << logger.logName << endl;
+    // cout << "  日志保存路径：" << logger.logFilePath << endl;
+    // cout << "  单文件最大大小："<< logger.logMixSize << "M" << endl;
+    // cout << "  日志保存时间 ：" << logger.logOverlay << "天" << endl << endl;
+    // cout << "|=================================================|" <<endl;
 }
 
 string FdogLogger::getCoutType(coutType coutType){
@@ -131,10 +160,21 @@ string FdogLogger::getLogNameTime(){
     return tmp;
 }
 
-string FdogLogger::getFilePash(){
+string FdogLogger::getSourceFilePash(){
     getcwd(szbuf, sizeof(szbuf)-1);
     string szbuf_str = szbuf;
     return szbuf_str + SLASH;
+}
+string FdogLogger::getFilePash(){
+    return logger.logFilePath + SLASH;
+}
+
+string FdogLogger::getFilePathAndName(){
+    return logger.logFilePath + SLASH + logger.logName + ".log";
+}
+
+string FdogLogger::getFilePathAndNameAndTime(){
+    return logger.logFilePath + logger.logName + getLogNameTime() + ".log";
 }
 
 string FdogLogger::getLogCoutProcessId(){
@@ -166,42 +206,34 @@ string FdogLogger::getLogCoutUserName(){
     return SPACE + name + SPACE;
 }
 
-bool FdogLogger::createFile(string filePash){
-    int len = filePash.length();
-    if(!len){
-        filePash = "log";
-        if (0 != access(filePash.c_str(), 0)){
-            if(-1 == mkdir(filePash.c_str(),0)){
-                std::cout<<"没路径";
-                return 0;
-            }
-        }
+bool FdogLogger::logFileWrite(string messages, string message, string line_effd){
+    string filePashAndName = getFilePathAndName();
+
+    long fileSize = filemanagement.verifyFileSize(filePashAndName);
+    if (fileSize > (long)atoi(logger.logMixSize.data()) * 1048576 && logger.logBehavior == "1"){
+        string newFileName = getFilePathAndNameAndTime();
+        filemanagement.fileRename(filePashAndName, newFileName);
+        filemanagement.createFile(filePashAndName);
     }
-    std::string filePash_cy(len,'\0');
-    for(int i =0;i<len;i++){
-        filePash_cy[i]=filePash[i];
-        if(filePash_cy[i]=='/' || filePash_cy[i]=='\\'){
-            if (-1 == access(filePash_cy.c_str(), 0)){
-                if(0!=mkdir(filePash_cy.c_str(),0)){
-                    std::cout<<"有路径";
-                    return 0;
-                }
-            }
-        }
-    }
+    mutex_file->lock();
+    ofstream file;
+    file.open(filePashAndName, ::ios::app | ios::out);
+    //这里应该用队列，缓冲区达到一定量再写入，频繁打开文件不太好，先这样吧
+    file << messages << message << line_effd;
+    file.close();
+    mutex_file->unlock();
     return 1;
 }
 
-bool FdogLogger::logFileWrite(string messages){
-    ofstream file;
-    file.open(logger.logFilePath + logger.logName, ::ios::app | ios::out);
-    if(!file){
-        cout<<"写失败"<<endl;
-        return 0;
-    }
-    file << messages;
-    file.close();
-    return 1;
+string FdogLogger::getLogFileSwitch(){
+    return logger.logFileSwitch;
+}
+
+string FdogLogger::getLogTerminalSwitch(){
+    return logger.logTerminalSwitch;
+}
+string FdogLogger::getCoutTypeColor(string colorType){
+    return coutColor[colorType];
 }
 
 bool FdogLogger::bindFileCoutMap(string value1, fileType value2){
