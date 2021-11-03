@@ -1,0 +1,1 @@
+/usr/bin/c++  -fPIC   -shared -Wl,-soname,libfdoglog.so -o ../../lib/libfdoglog.so CMakeFiles/fdoglog.dir/src/fdoglogger.cpp.o CMakeFiles/fdoglog.dir/src/filemanagement.cpp.o 

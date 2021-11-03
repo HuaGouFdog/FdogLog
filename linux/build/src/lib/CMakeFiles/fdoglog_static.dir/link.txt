@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../lib/libfdoglog.a  CMakeFiles/fdoglog_static.dir/src/fdoglogger.cpp.o CMakeFiles/fdoglog_static.dir/src/filemanagement.cpp.o
+/usr/bin/ranlib ../../lib/libfdoglog.a
