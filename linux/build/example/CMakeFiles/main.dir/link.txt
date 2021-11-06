@@ -1,1 +1,0 @@
-/usr/bin/c++      CMakeFiles/main.dir/test.cpp.o  -o ../bin/main  -L/media/rcl/WORK1/FdogLog/build/lib -lfdoglog -Wl,-Bstatic -lfdoglog -Wl,-Bdynamic -Wl,-rpath,/media/rcl/WORK1/FdogLog/build/lib 
