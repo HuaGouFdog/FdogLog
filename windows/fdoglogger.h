@@ -20,121 +20,13 @@
 #include<Windows.h>
 #endif
 
-using namespace std;
-
 namespace fdog {
-
-#define RED   "\e[1;31m"
-#define BLUE  "\e[1;34m"
-#define GREEN "\e[1;32m"
-#define WHITE "\e[1;37m"
-#define PURPLE "\e[1;35m"
-#define DEFA  "\e[0m"
-
-#define MEGABYTES 1048576
-#define SWITCH_OFF "off"
-#define SWITCH_ON  "on"
-
-enum class coutType: int {Error, Warn, Info, Debug, Trace};
-enum class fileType: int {Error, Warn, Info, Debug, Trace};
-enum class terminalType: int {Error, Warn, Info, Debug, Trace};
-
-struct Logger {
-    string logSwitch;           //日志开关
-    string logFileSwitch;       //是否写入文件
-    string logTerminalSwitch;   //是否打印到终端
-    string logFileQueueSwitch;  //是否开启队列策略
-    string logName;             //日志文件名字
-    string logFilePath;         //日志文件保存路径
-    string logMixSize;          //日志文件最大大小
-    string logBehavior;         //日志文件达到最大大小行为
-    string logOutputLevelFile;  //日志输出等级(file)
-    string logOutputLevelTerminal;//日志输出等级
-};
-
-class FdogLogger {
-public:
-    void initLogConfig();
-
-    void releaseConfig();
-
-    void ConfInfoPrint();
-
-    static FdogLogger* getInstance();
-
-    string getCoutType(coutType coutType);
-
-    bool getFileType(fileType fileCoutBool);
-
-    bool getTerminalType(terminalType terminalCoutTyle);
-
-    string getLogCoutTime();
-
-    string getLogNameTime();
-
-    string getSourceFilePash();
-
-    string getFilePash();
-
-    string getFilePathAndName();
-
-    string getFilePathAndNameAndTime();
-
-    string getLogCoutProcessId();
-
-    string getLogCoutThreadId();
-
-    string getLogCoutUserName();
-    
-    string getLogSwitch();
-
-    string getLogFileSwitch();
-
-    string getLogTerminalSwitch();
-
-    string getCoutTypeColor(string colorType);
-
-    bool logFileWrite(string messages, string message, string LINE);
-
-    bool insertQueue(string messages, string filePashAndName);
-
-    bool bindFileCoutMap(string value1, fileType value2);
-
-    bool bindTerminalCoutMap(string value1, terminalType value2);
-
-	static mutex * mutex_terminal;
-private:
-    char szbuf[128];
-    Logger logger;
-    FileManagement filemanagement;
-    static FdogLogger * singleObject;
-    static mutex * mutex_log;
-    static mutex * mutex_file;
-    static mutex * mutex_queue;
-    map<coutType, string> coutTypeMap;
-    map<fileType, bool> fileCoutMap;
-    map<terminalType, bool> terminalCoutMap;
-    map<string, string> coutColor;
-    queue<string> messageQueue;
-
-private:
-    FdogLogger();
-    ~FdogLogger();
-};
 
 #define Error1 __FDOGNAME__(Error)
 #define Warn1 __FDOGNAME__(Warn)
 #define Info1 __FDOGNAME__(Info)
 #define Debug1 __FDOGNAME__(Debug)
 #define Trace1 __FDOGNAME__(Trace)
-
-
-#define SQUARE_BRACKETS_LEFT " ["
-#define SQUARE_BRACKETS_RIGHT "] "
-#define SPACE " "
-#define LINE_FEED "\n"
-#define COLON ":"
-#define SLASH "/"
 
 #define __FDOGTIME__  FdogLogger::getInstance()->getLogCoutTime()          //时间宏
 #define __FDOGPID__   FdogLogger::getInstance()->getLogCoutProcessId()     //进程宏
@@ -145,37 +37,140 @@ private:
 #define __FDOGLINE__  __LINE__          //行数宏
 #define __FDOGNAME__(name) #name        //名字宏
 
+const int MEGABYTES = 1048576;
+const std::string  SQUARE_BRACKETS_LEFT  = " [";
+const std::string  SQUARE_BRACKETS_RIGHT = "] ";
+const std::string SPACE = " ";
+const std::string LINE_FEED = "\n";
+const std::string COLON  = ":";
+const std::string SLASH = "/";
+const std::string DEFA = "\e[0m";
+const std::string SWITCH_OFF = "off";
+const std::string SWITCH_ON = "on";
+const std::string RED = "\e[1;31m";
+const std::string BLUE = "\e[1;34m";
+const std::string GREEN = "\e[1;32m";
+const std::string WHITE = "\e[1;37m";
+const std::string PURPLE = "\e[1;35m";
+
+enum class coutType: int {Error, Warn, Info, Debug, Trace};
+enum class fileType: int {Error, Warn, Info, Debug, Trace};
+enum class terminalType: int {Error, Warn, Info, Debug, Trace};
+
+struct Logger {
+    std::string logSwitch;           //日志开关
+    std::string logFileSwitch;       //是否写入文件
+    std::string logTerminalSwitch;   //是否打印到终端
+    std::string logFileQueueSwitch;  //是否开启队列策略
+    std::string logName;             //日志文件名字
+    std::string logFilePath;         //日志文件保存路径
+    std::string logMixSize;          //日志文件最大大小
+    std::string logBehavior;         //日志文件达到最大大小行为
+    std::string logOutputLevelFile;  //日志输出等级(file)
+    std::string logOutputLevelTerminal;//日志输出等级
+};
+
+class FdogLogger {
+private:
+    char sourceFilePash[128];
+    Logger logger;
+    static FdogLogger * singleObject;
+    static std::mutex * mutex_log;
+    static std::mutex * mutex_file;
+    static std::mutex * mutex_queue;
+    std::map<coutType, std::string> coutTypeMap;
+    std::map<fileType, bool> fileCoutMap;
+    std::map<terminalType, bool> terminalCoutMap;
+    std::map<std::string, std::string> coutColor;
+    std::queue<std::string> messageQueue;
+
+private:
+    FdogLogger();
+    ~FdogLogger();
+
+public:
+    static std::mutex * mutex_terminal;
+
+    void initLogConfig();
+
+    void releaseConfig();
+
+    void ConfInfoPrint();
+
+    static FdogLogger* getInstance();
+
+    const std::string getLogCoutTime()const;
+
+    const std::string getLogNameTime()const;
+
+    const std::string getSourceFilePash();
+
+    const std::string getFilePash()const;
+
+    const std::string getFilePathAndName()const;
+
+    const std::string getFilePathAndNameAndTime()const;
+
+    const std::string getLogCoutProcessId()const;
+
+    const std::string getLogCoutThreadId()const;
+
+    const std::string getLogCoutUserName()const;
+    
+    const std::string getLogSwitch()const;
+
+    const std::string getLogFileSwitch()const;
+
+    const std::string getLogTerminalSwitch()const;
+
+    const std::string getCoutType(const coutType &coutType)const;
+
+    const std::string getCoutTypeColor(const std::string &colorType);
+
+    const bool getFileType(const fileType &fileCoutBool);
+
+    const bool getTerminalType(const terminalType &terminalCoutTyle);
+
+    const bool logFileWrite(const std::string &messages, const std::string &message, const std::string &LINE);
+
+    const bool insertQueue(const std::string &messages, const std::string &filePashAndName);
+
+    const bool bindFileCoutMap(const std::string &value1, const fileType &value2);
+
+    const bool bindTerminalCoutMap(const std::string &value1, const terminalType &value2);
+};
+
+#define KV(value) " " << #value << "=" << value
 
 #define COMBINATION_INFO_FILE(coutTypeInfo, message) \
     do{\
-        ostringstream oss;\
-        streambuf* pOldBuf = std::cout.rdbuf(oss.rdbuf());\
-        cout << message;\
-        string ret = oss.str();\
-        cout.rdbuf(pOldBuf);\
-        string messagesAll = __FDOGTIME__ + coutTypeInfo + __USERNAME__ + __FDOGTID__ + SQUARE_BRACKETS_LEFT + \
-        __FDOGFILE__  + SPACE +__FDOGFUNC__ + COLON + to_string(__FDOGLINE__) + SQUARE_BRACKETS_RIGHT;\
+        std::ostringstream oss;\
+        std::streambuf* pOldBuf = std::cout.rdbuf(oss.rdbuf());\
+        std::cout << message;\
+        std::string ret = oss.str();\
+        std::cout.rdbuf(pOldBuf);\
+        std::string messagesAll = __FDOGTIME__ + coutTypeInfo + __USERNAME__ + __FDOGTID__ + SQUARE_BRACKETS_LEFT + \
+        __FDOGFILE__  + SPACE +__FDOGFUNC__ + COLON + std::to_string(__FDOGLINE__) + SQUARE_BRACKETS_RIGHT;\
         FdogLogger::getInstance()->logFileWrite(messagesAll, ret, LINE_FEED); \
     }while(0);
-    
+
 #ifdef __linux__
 #define COMBINATION_INFO_TERMINAL(coutTypeInfo, message) \
     do{\
-        string color = FdogLogger::getInstance()->getCoutTypeColor(coutTypeInfo);\
-        string logFormatCout = __FDOGTIME__ + color + coutTypeInfo + DEFA + __USERNAME__ + __FDOGTID__ + SQUARE_BRACKETS_LEFT + \
-        __FDOGFILE__  + SPACE +__FDOGFUNC__ + COLON + to_string(__FDOGLINE__) + SQUARE_BRACKETS_RIGHT;\
+        std::string color = FdogLogger::getInstance()->getCoutTypeColor(coutTypeInfo);\
+        std::string logFormatCout = __FDOGTIME__ + color + coutTypeInfo + DEFA + __USERNAME__ + __FDOGTID__ + SQUARE_BRACKETS_LEFT + \
+        __FDOGFILE__  + SPACE +__FDOGFUNC__ + COLON + std::to_string(__FDOGLINE__) + SQUARE_BRACKETS_RIGHT;\
 		FdogLogger::mutex_terminal->lock(); \
-        cout << logFormatCout << message << LINE_FEED;\
+        std::cout << logFormatCout << message << LINE_FEED;\
 		fflush(stdout);\
         FdogLogger::mutex_terminal->unlock(); \
     }while(0);
 #elif _WIN32
     do{\
-        string color = FdogLogger::getInstance()->getCoutTypeColor(coutTypeInfo);\
-        string logFormatCout = __FDOGTIME__ + color + coutTypeInfo +  __USERNAME__ + __FDOGTID__ + SQUARE_BRACKETS_LEFT + \
-        __FDOGFILE__  + SPACE +__FDOGFUNC__ + COLON + to_string(__FDOGLINE__) + SQUARE_BRACKETS_RIGHT;\
+        std::string logFormatCout = __FDOGTIME__ + coutTypeInfo +  __USERNAME__ + __FDOGTID__ + SQUARE_BRACKETS_LEFT + \
+        __FDOGFILE__  + SPACE +__FDOGFUNC__ + COLON + std::to_string(__FDOGLINE__) + SQUARE_BRACKETS_RIGHT;\
 		FdogLogger::mutex_terminal->lock(); \
-        cout << logFormatCout << message << LINE_FEED;\
+        std::cout << logFormatCout << message << LINE_FEED;\
 		fflush(stdout);\
         FdogLogger::mutex_terminal->unlock(); \
     }while(0);
@@ -183,7 +178,7 @@ private:
 
 #define LoggerCout(coutTyle, coutTypeInfo, fileCoutBool, terminalCoutBool, message) \
     do {\
-        string coutType = FdogLogger::getInstance()->getCoutType(coutTyle);\
+        std::string coutType = FdogLogger::getInstance()->getCoutType(coutTyle);\
         if( SWITCH_ON == FdogLogger::getInstance()->getLogSwitch()){\
             if (SWITCH_OFF != FdogLogger::getInstance()->getLogFileSwitch()){\
                 if (FdogLogger::getInstance()->getFileType(fileCoutBool)) {\
