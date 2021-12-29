@@ -179,7 +179,7 @@ void FdogLogger::ConfInfoPrint() {
 #endif
 }
 
-string FdogLogger::getCoutType(coutType coutType){
+std::string FdogLogger::getCoutType(coutType coutType){
     return singleObject->coutTypeMap[coutType];
 }
 
@@ -210,12 +210,12 @@ string FdogLogger::getLogNameTime(){
 
 string FdogLogger::getSourceFilePash(){
 #ifdef __linux__
-	getcwd(szbuf, sizeof(szbuf) - 1);
+	getcwd(sourceFilePash, sizeof(sourceFilePash) - 1);
 #elif _WIN32
-	getcwd(szbuf, sizeof(szbuf) - 1);
+	getcwd(sourceFilePash, sizeof(sourceFilePash) - 1);
 #endif
-    string szbuf_str = szbuf;
-    return szbuf_str + SLASH;
+    string sourceFilePash_str = sourceFilePash;
+    return sourceFilePash_str + SLASH;
 }
 string FdogLogger::getFilePash(){
     return logger.logFilePath + SLASH;

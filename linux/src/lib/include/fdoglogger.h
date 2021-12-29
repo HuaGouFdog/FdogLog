@@ -74,6 +74,7 @@ class FdogLogger {
 private:
     char sourceFilePash[128];
     Logger logger;
+    FileManagement filemanagement;
     static FdogLogger * singleObject;
     static std::mutex * mutex_log;
     static std::mutex * mutex_file;
@@ -99,45 +100,45 @@ public:
 
     static FdogLogger* getInstance();
 
-    const std::string getLogCoutTime()const;
+    std::string getLogCoutTime();
 
-    const std::string getLogNameTime()const;
+    std::string getLogNameTime();
 
-    const std::string getSourceFilePash();
+    std::string getSourceFilePash();
 
-    const std::string getFilePash()const;
+    std::string getFilePash();
 
-    const std::string getFilePathAndName()const;
+    std::string getFilePathAndName();
 
-    const std::string getFilePathAndNameAndTime()const;
+    std::string getFilePathAndNameAndTime();
 
-    const std::string getLogCoutProcessId()const;
+    std::string getLogCoutProcessId();
 
-    const std::string getLogCoutThreadId()const;
+    std::string getLogCoutThreadId();
 
-    const std::string getLogCoutUserName()const;
+    std::string getLogCoutUserName();
     
-    const std::string getLogSwitch()const;
+    std::string getLogSwitch();
 
-    const std::string getLogFileSwitch()const;
+    std::string getLogFileSwitch();
 
-    const std::string getLogTerminalSwitch()const;
+    std::string getLogTerminalSwitch();
 
-    const std::string getCoutType(const coutType &coutType)const;
+    std::string getCoutType( coutType coutType);
 
-    const std::string getCoutTypeColor(const std::string &colorType);
+    std::string getCoutTypeColor( std::string colorType);
 
-    const bool getFileType(const fileType &fileCoutBool);
+    bool getFileType( fileType fileCoutBool);
 
-    const bool getTerminalType(const terminalType &terminalCoutTyle);
+    bool getTerminalType( terminalType terminalCoutTyle);
 
-    const bool logFileWrite(const std::string &messages, const std::string &message, const std::string &LINE);
+    bool logFileWrite( std::string messages,  std::string message,  std::string LINE);
 
-    const bool insertQueue(const std::string &messages, const std::string &filePashAndName);
+    bool insertQueue( std::string messages,  std::string filePashAndName);
 
-    const bool bindFileCoutMap(const std::string &value1, const fileType &value2);
+    bool bindFileCoutMap( std::string value1,  fileType value2);
 
-    const bool bindTerminalCoutMap(const std::string &value1, const terminalType &value2);
+    bool bindTerminalCoutMap( std::string value1,  terminalType value2);
 };
 
 #define KV(value) " " << #value << "=" << value
