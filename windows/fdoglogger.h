@@ -156,7 +156,7 @@ public:
     }while(0);
 
 #ifdef __linux__
-#define COMBINATION_INFO_TERMINAL(coutTypeInfo, message) \
+#define COMBINATION_INFO_TERMINAL(coutTypeInfo, message)\
     do{\
         std::string color = FdogLogger::getInstance()->getCoutTypeColor(coutTypeInfo);\
         std::string logFormatCout = __FDOGTIME__ + color + coutTypeInfo + DEFA + __USERNAME__ + __FDOGTID__ + SQUARE_BRACKETS_LEFT + \
@@ -167,6 +167,7 @@ public:
         FdogLogger::mutex_terminal->unlock(); \
     }while(0);
 #elif _WIN32
+#define COMBINATION_INFO_TERMINAL(coutTypeInfo, message)\
     do{\
         std::string logFormatCout = __FDOGTIME__ + coutTypeInfo +  __USERNAME__ + __FDOGTID__ + SQUARE_BRACKETS_LEFT + \
         __FDOGFILE__  + SPACE +__FDOGFUNC__ + COLON + std::to_string(__FDOGLINE__) + SQUARE_BRACKETS_RIGHT;\
